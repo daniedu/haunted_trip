@@ -1,10 +1,6 @@
-/home/nixos/.config/nixpkgs/overlays
-/home/nixos/.config/nixpkgs/overlays.nix
-/home/nixos/proyectos/wizardry_like/.devenv/bootstrap/bootstrapLib.nix
-/home/nixos/proyectos/wizardry_like/.devenv/bootstrap/default.nix
-/home/nixos/proyectos/wizardry_like/.devenv/bootstrap/resolve-lock.nix
-/home/nixos/proyectos/wizardry_like/devenv.local.nix
-/home/nixos/proyectos/wizardry_like/devenv.lock
-/home/nixos/proyectos/wizardry_like/devenv.nix
-/home/nixos/proyectos/wizardry_like/devenv.yaml
-/home/nixos/proyectos/wizardry_like/.env
+/home/work/Projects/dev_games/haunted_trip/.devenv/bootstrap/bootstrapLib.nix
+/home/work/Projects/dev_games/haunted_trip/.devenv/bootstrap/default.nix
+/home/work/Projects/dev_games/haunted_trip/devenv.lock
+/home/work/Projects/dev_games/haunted_trip/devenv.nix
+/home/work/Projects/dev_games/haunted_trip/devenv.yaml
+/home/work/Projects/dev_games/haunted_trip/.env

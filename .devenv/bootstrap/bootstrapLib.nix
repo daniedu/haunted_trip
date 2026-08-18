@@ -24,7 +24,6 @@ rec {
   mkDevenvForSystem =
     { version
     , is_development_version ? false
-    , require_version_match ? false
     , system
     , devenv_root
     , git_root ? null
@@ -35,6 +34,7 @@ rec {
     , devenv_state ? null
     , devenv_istesting ? false
     , devenv_direnvrc_latest_version
+    , container_name ? null
     , active_profiles ? [ ]
     , hostname
     , username
@@ -54,23 +54,6 @@ rec {
       targetSystem = system;
 
       overlays = lib.flatten (lib.mapAttrsToList getOverlays devenv_inputs);
-      unfreePackageError = pkg:
-        let
-          name = lib.getName pkg;
-        in
-        throw ''
-          devenv: package '${name}' has an unfree license.
-
-          To allow all unfree packages, add this to devenv.yaml:
-
-            allow_unfree: true
-
-          To allow only this package, add this to devenv.yaml:
-
-            nixpkgs:
-              permitted_unfree_packages:
-                - ${name}
-        '';
 
       # Helper to create pkgs for a given system with nixpkgs_config
       mkPkgsForSystem =
@@ -78,21 +61,18 @@ rec {
         import nixpkgs {
           system = evalSystem;
           config = nixpkgs_config // {
-            # nixpkgs' check-meta.nix natively handles permittedInsecurePackages
-            # via allowInsecureDefaultPredicate using the full derivation name.
-            # We must NOT override allowInsecurePredicate here, as lib.getName
-            # strips the version, causing mismatches with user-provided entries
-            # like "openssl-1.1.1w".
-            #
-            # For unfree packages, nixpkgs does not natively support
-            # permittedUnfreePackages, so we provide a custom predicate.
             allowUnfreePredicate =
               if nixpkgs_config.allowUnfree or false then
                 (_: true)
               else if (nixpkgs_config.permittedUnfreePackages or [ ]) != [ ] then
-                (pkg: builtins.elem (lib.getName pkg) (nixpkgs_config.permittedUnfreePackages or [ ]) || unfreePackageError pkg)
+                (pkg: builtins.elem (lib.getName pkg) (nixpkgs_config.permittedUnfreePackages or [ ]))
               else
-                unfreePackageError;
+                (_: false);
+            allowInsecurePredicate =
+              if (nixpkgs_config.permittedInsecurePackages or [ ]) != [ ] then
+                (pkg: builtins.elem (lib.getName pkg) (nixpkgs_config.permittedInsecurePackages or [ ]))
+              else
+                (_: false);
           } // lib.optionalAttrs ((nixpkgs_config.allowlistedLicenses or [ ]) != [ ]) {
             allowlistedLicenses = map (name: lib.licenses.${name}) (nixpkgs_config.allowlistedLicenses or [ ]);
           } // lib.optionalAttrs ((nixpkgs_config.blocklistedLicenses or [ ]) != [ ]) {
@@ -181,13 +161,6 @@ rec {
                       cliVersion = version;
                     }
                 )
-                (lib.optionalAttrs
-                  (builtins.hasAttr "cli" options.devenv
-                  && builtins.hasAttr "requireVersionMatch" options.devenv.cli)
-                  {
-                    cli.requireVersionMatch = require_version_match;
-                  }
-                )
                 (lib.optionalAttrs (builtins.hasAttr "tmpdir" options.devenv) {
                   tmpdir = devenv_tmpdir;
                 })
@@ -216,6 +189,10 @@ rec {
               ];
             }
           )
+          (lib.optionalAttrs (container_name != null) {
+            container.isBuilding = lib.mkForce true;
+            containers.${container_name}.isBuilding = true;
+          })
         ]
         ++ (lib.flatten (map importModule devenv_imports))
         ++ (if !skip_local_src then (importModule (devenv_root + "/devenv.nix")) else [ ])
@@ -231,7 +208,6 @@ rec {
 
       # Phase 1: Base evaluation to extract profile definitions
       baseProject = lib.evalModules {
-        class = "devenv";
         specialArgs = inputs // {
           inherit inputs secretspec primops;
         };
@@ -393,10 +369,10 @@ rec {
                     config: optionPath:
                     if lib.isAttrs config && config ? _type then
                       config
-                    else if pathNeedsOverride optionPath then
-                      lib.mkOverride profilePriority config
                     else if lib.isAttrs config then
                       lib.mapAttrs (name: value: applyOverrideRecursive value (optionPath ++ [ name ])) config
+                    else if pathNeedsOverride optionPath then
+                      lib.mkOverride profilePriority config
                     else
                       config;
 
@@ -425,27 +401,6 @@ rec {
           baseProject.extendModules { modules = allPrioritizedModules; };
 
       config = project.config;
-
-      # Per-container scoped re-evaluation that flips `isBuilding` for the
-      # container being built. Selecting one container cannot pollute the
-      # evaluation of any other operation, since each `containerBuilds.<name>`
-      # is its own `extendModules` scope.
-      mkContainerBuilds =
-        evalProject:
-        lib.genAttrs (lib.attrNames evalProject.config.containers) (
-          name:
-          let
-            scoped = evalProject.extendModules {
-              modules = [{
-                container.isBuilding = lib.mkForce true;
-                containers.${name}.isBuilding = lib.mkForce true;
-              }];
-            };
-          in
-          scoped.config.containers.${name}
-        );
-
-      containerBuilds = mkContainerBuilds project;
 
       # Apply config overlays to pkgs
       pkgs = pkgsBootstrap.appendOverlays (config.overlays or [ ]);
@@ -511,7 +466,6 @@ rec {
         let
           evalPkgs = mkPkgsForSystem evalSystem;
           evalProject = lib.evalModules {
-            class = "devenv";
             specialArgs = inputs // {
               inherit inputs secretspec primops;
             };
@@ -520,7 +474,6 @@ rec {
         in
         {
           config = evalProject.config;
-          containerBuilds = mkContainerBuilds evalProject;
         };
 
       # All supported systems for cross-compilation (lazily evaluated)
@@ -533,11 +486,7 @@ rec {
 
       # Generate perSystem entries for all systems (only evaluated when accessed)
       perSystemConfigs = lib.genAttrs allSystems (
-        perSystem:
-        if perSystem == targetSystem then
-          { inherit config containerBuilds; }
-        else
-          evalForSystem perSystem
+        perSystem: if perSystem == targetSystem then { config = config; } else evalForSystem perSystem
       );
     in
     {
@@ -546,7 +495,6 @@ rec {
         config
         options
         project
-        inputs
         ;
       bash = pkgs.bash;
       shell = config.shell;
@@ -556,7 +504,7 @@ rec {
       build = build project.options config;
       devenv = {
         # Backwards compatibility: wrap config in devenv attribute for code expecting devenv.config.*
-        inherit config containerBuilds;
+        config = config;
         # perSystem structure for cross-compilation (e.g. macOS building Linux containers)
         perSystem = perSystemConfigs;
       };
@@ -585,7 +533,7 @@ rec {
     if !hasDevenv then
       throw ''
         Input does not have a devenv.nix file.
-        Expected file at: ${toString devenvPath}
+        Expected file at: ${devenvPath}
 
         To use this input's devenv configuration, the input must provide a devenv.nix file.
       ''
@@ -598,7 +546,6 @@ rec {
         lib = pkgs.lib;
 
         project = lib.evalModules {
-          class = "devenv";
           specialArgs = allInputs // {
             inputs = allInputs;
             secretspec = null;
