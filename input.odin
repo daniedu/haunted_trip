@@ -3,6 +3,7 @@ package main
 import rl "vendor:raylib"
 
 process_player_inputs :: proc(player: ^Player, dt: f32) {
+	// --- 1. Movement ---
 
 	input_dir: rl.Vector2
 
@@ -17,4 +18,13 @@ process_player_inputs :: proc(player: ^Player, dt: f32) {
 
 	player.velocity = input_dir * player.move_speed
 	player.position += player.velocity * dt
+
+	// --- 2. Attack Timing & Input Logic ---
+	if !player.is_attacking && rl.IsKeyPressed(.SPACE) {
+		player.is_attacking = true
+
+		stats := WEAPON_STATS[player.equipped_weapon]
+		player.attack_duration = stats.attack_duration
+		player.attack_timer = stats.attack_duration
+	}
 }
