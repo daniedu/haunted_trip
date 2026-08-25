@@ -3,8 +3,7 @@ package main
 import rl "vendor:raylib"
 
 process_player_inputs :: proc(player: ^Player, dt: f32) {
-	// --- 1. Movement ---
-
+	// --- 1. & Movement Logic ---
 	input_dir: rl.Vector2
 
 	if rl.IsKeyDown(.RIGHT) || rl.IsKeyDown(.D) {input_dir.x += 1}
@@ -17,7 +16,7 @@ process_player_inputs :: proc(player: ^Player, dt: f32) {
 	}
 
 	player.velocity = input_dir * player.move_speed
-	player.position += player.velocity * dt
+	// player.position += player.velocity * dt
 
 	// --- 2. Attack Timing & Input Logic ---
 	if !player.is_attacking && rl.IsKeyPressed(.SPACE) {

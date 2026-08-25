@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import rl "vendor:raylib"
 
 PIXEL_WINDOWS_HEIGHT :: 320
@@ -51,14 +52,15 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 	rl.SetWindowState({.WINDOW_RESIZABLE})
 
+	game_state := GameState.Play
 
 	player := Player {
 		move_speed = 60,
 	}
 
 	map_grid := [5][5]TileType {
-		{.Wall, .Wall, .Wall, .Wall, .Wall},
-		{.Wall, .Floor, .Floor, .Floor, .Wall},
+		{.Floor, .Floor, .Wall, .Wall, .Wall},
+		{.Floor, .Floor, .Floor, .Floor, .Wall},
 		{.Wall, .Floor, .Water, .Floor, .Wall},
 		{.Wall, .Floor, .Floor, .Floor, .Wall},
 		{.Wall, .Wall, .Wall, .Wall, .Wall},
@@ -71,11 +73,21 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		dt := rl.GetFrameTime()
 
-		process_player_inputs(&player, dt)
+		// GAME STATE
+		switch game_state {
 
+		case .Play:
+			process_player_inputs(&player, dt)
+			update_player_collisions(&player, map_grid, dt)
+
+		case .Edit:
+			// TODO: Handle mouse clicking to place tiles on the map_grid
+			if rl.IsMouseButtonPressed(.LEFT) {
+				// Edit logic here...
+			}
+		}
 
 		// Drawing
-
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 
@@ -98,6 +110,7 @@ main :: proc() {
 				draw_tile(map_grid[y][x], x, y, tile_size, use_assets, tileset)
 			}
 		}
+
 		rl.DrawText("base", 0, 0, 12, rl.WHITE)
 		rl.DrawRectangleV(player.position, 32, rl.GREEN)
 
@@ -108,7 +121,27 @@ main :: proc() {
 		// 2. SCREEN SPACE / HUD (Fixed to Window)
 		// ==========================================
 
-		rl.DrawRectangle(0, rl.GetScreenHeight() - 20, rl.GetScreenWidth(), 20, rl.WHITE)
+		text_player_pos := fmt.ctprintf(
+			"Player X: %.1f, Y: %.1f, MV: %.1f",
+			player.position.x,
+			player.position.y,
+			player.move_speed,
+		)
+		rl.DrawText(text_player_pos, 0, 0, 12, rl.WHITE)
+
+		text_player_data := fmt.ctprintf(
+			"Player is_attacking: %, weapon: %",
+			player.is_attacking,
+			player.equipped_weapon,
+		)
+		rl.DrawText(text_player_data, 0, 12, 12, rl.WHITE)
+		// rl.DrawRectangle(
+		// 	0,
+		// 	rl.GetScreenHeight() - rl.GetScreenHeight() / 4,
+		// 	rl.GetScreenWidth(),
+		// 	rl.GetScreenHeight() / 4,
+		// 	rl.WHITE,
+		// )
 
 	}
 
