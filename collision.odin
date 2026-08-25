@@ -5,7 +5,7 @@ import rl "vendor:raylib"
 // Check if a given rectangle overlaps any solid tile in the map
 is_position_solid :: proc(pos: rl.Vector2, size: f32, map_grid: [5][5]TileType) -> bool {
 	// 3-pixel inset padding prevents corners from snagging and jittering against walls
-	padding :: 3.0
+	padding :: 1.0
 
 	player_rect := rl.Rectangle {
 		y      = pos.y + padding,
@@ -38,21 +38,21 @@ is_position_solid :: proc(pos: rl.Vector2, size: f32, map_grid: [5][5]TileType) 
 
 update_player_collisions :: proc(player: ^Player, map_grid: [5][5]TileType, dt: f32) {
 	// 1. Handle X axis movement safely
-	next_x_pos := player.position
-	next_x_pos.x += player.velocity.x * dt
+	next_pos := player.position
+	next_pos.x += player.velocity.x * dt
 
-	if !is_position_solid(next_x_pos, 32, map_grid) {
-		player.position.x = next_x_pos.x
+	if !is_position_solid(next_pos, 32, map_grid) {
+		player.position.x = next_pos.x
 	} else {
 		player.velocity.x = 0
+		next_pos.x = player.position.x // Reset X component if blocked
 	}
 
-	// 2. Handle Y axis movement safely
-	next_y_pos := player.position
-	next_y_pos.y += player.velocity.y * dt
+	// 2. Handle Y axis movement safely (using the updated next_pos containing the safe X!)
+	next_pos.y += player.velocity.y * dt
 
-	if !is_position_solid(next_y_pos, 32, map_grid) {
-		player.position.y = next_y_pos.y
+	if !is_position_solid(next_pos, 32, map_grid) {
+		player.position.y = next_pos.y
 	} else {
 		player.velocity.y = 0
 	}

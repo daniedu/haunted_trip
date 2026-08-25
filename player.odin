@@ -1,5 +1,6 @@
 package main
 
+import rl "vendor:raylib"
 
 Player :: struct {
 	position:        rl.Vector2,
@@ -10,4 +11,12 @@ Player :: struct {
 	is_attacking:    bool,
 	attack_timer:    f32,
 	attack_duration: f32,
+}
+
+
+Direction :: enum {
+	Up,
+	Down,
+	Left,
+	Right,
 }

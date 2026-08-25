@@ -5,45 +5,6 @@ import rl "vendor:raylib"
 
 PIXEL_WINDOWS_HEIGHT :: 320
 
-
-Direction :: enum {
-	Up,
-	Down,
-	Left,
-	Right,
-}
-
-WeaponType :: enum {
-	None,
-	Sword,
-	Bow,
-	Staff,
-}
-
-WeaponData :: struct {
-	attack_duration: f32,
-	range:           f32,
-	damage:          int,
-}
-
-WEAPON_STATS := [WeaponType]WeaponData {
-	.None = {attack_duration = 0.1, range = 8.0, damage = 1},
-	.Sword = {attack_duration = 0.2, range = 14.0, damage = 5},
-	.Bow = {attack_duration = 0.3, range = 25.0, damage = 4},
-	.Staff = {attack_duration = 0.4, range = 18.0, damage = 6},
-}
-
-Player :: struct {
-	position:        rl.Vector2,
-	velocity:        rl.Vector2,
-	facing:          Direction,
-	move_speed:      f32,
-	equipped_weapon: WeaponType,
-	is_attacking:    bool,
-	attack_timer:    f32,
-	attack_duration: f32,
-}
-
 main :: proc() {
 
 	rl.InitWindow(1920, 1080, "testinv")
@@ -55,7 +16,8 @@ main :: proc() {
 	game_state := GameState.Play
 
 	player := Player {
-		move_speed = 60,
+		move_speed      = 60,
+		equipped_weapon = .None,
 	}
 
 	map_grid := [5][5]TileType {
@@ -113,7 +75,15 @@ main :: proc() {
 
 		rl.DrawText("base", 0, 0, 12, rl.WHITE)
 		rl.DrawRectangleV(player.position, 32, rl.GREEN)
+		if player.is_attacking {
+			weapon_rect := get_weapon_rect(player)
 
+			// Draw the active weapon slash for debugging/feedback
+			rl.DrawRectangleRec(weapon_rect, rl.RED)
+
+			// TODO: Loop through enemies and check:
+			// if rl.CheckCollisionRecs(weapon_rect, enemy.rect) { deal_damage(...) }
+		}
 
 		rl.EndMode2D()
 
