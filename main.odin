@@ -28,7 +28,7 @@ main :: proc() {
 		{.Wall, .Wall, .Wall, .Wall, .Wall},
 	}
 
-	tile_size := 32
+	tile_size := 16
 	use_assets := false
 	tileset := rl.Texture2D{}
 
