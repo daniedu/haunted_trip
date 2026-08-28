@@ -13,7 +13,6 @@ Player :: struct {
 	attack_duration: f32,
 }
 
-
 Direction :: enum {
 	Up,
 	Down,
