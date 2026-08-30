@@ -10,19 +10,28 @@ LevelData :: struct {
 	version: int,
 	width:   int,
 	height:  int,
-	tiles:   [][]u8, // row-major height x width, values are TileType u8
+	tiles:   [][]u8, // 0=empty, 1=oild
+}
+
+cell_to_u8 :: proc(c: TileCell) -> u8 {
+	if cell_is_empty(c) do return 0
+	// single set: 0->1, future sets will be +1 offset
+	return u8(c.set_id + 1)
+}
+u8_to_cell :: proc(v: u8) -> TileCell {
+	if v == 0 do return EmptyCell
+	set_id := int(v) - 1
+	if set_id < 0 || set_id >= len(TILESET_DECLS) do return EmptyCell
+	return TileCell{set_id = set_id}
 }
 
 save_level :: proc(path: string, m: Map) -> bool {
-	// Convert Map to LevelData
 	tiles := make([][]u8, MAP_HEIGHT)
-	defer {
-		// we need to keep inner slices until marshal completes, free after
-	}
+	defer {}
 	for y in 0..<MAP_HEIGHT {
 		row := make([]u8, MAP_WIDTH)
 		for x in 0..<MAP_WIDTH {
-			row[x] = u8(m[y][x])
+			row[x] = cell_to_u8(m[y][x])
 		}
 		tiles[y] = row
 	}
@@ -32,7 +41,7 @@ save_level :: proc(path: string, m: Map) -> bool {
 	}
 
 	data := LevelData{
-		version = 1,
+		version = 4,
 		width   = MAP_WIDTH,
 		height  = MAP_HEIGHT,
 		tiles   = tiles,
@@ -43,9 +52,6 @@ save_level :: proc(path: string, m: Map) -> bool {
 		return false
 	}
 	defer delete(bytes)
-
-	// Ensure dir exists (best effort)
-	// `assets/tiles` already exists per assets listing
 
 	if os.write_entire_file(path, bytes) != nil {
 		fmt.eprintf("save_level: write %s failed\n", path)
@@ -75,25 +81,25 @@ load_level :: proc(path: string, m: ^Map) -> bool {
 	}
 
 	if data.width != MAP_WIDTH || data.height != MAP_HEIGHT {
-		fmt.eprintf("load_level: size mismatch file %dx%d vs compiled %dx%d - will crop/pad\n", data.width, data.height, MAP_WIDTH, MAP_HEIGHT)
+		fmt.eprintf("load_level: size mismatch file %dx%d vs compiled %dx%d - crop/pad\n", data.width, data.height, MAP_WIDTH, MAP_HEIGHT)
 	}
 
-	// Copy with crop/pad
+	// ignore versions <4 (legacy inner/outer and TileType)
+	if data.version < 4 {
+		fmt.eprintf("load_level: ignoring legacy version %d, using default map\n", data.version)
+		m^ = make_default_map()
+		return false
+	}
+
 	for y in 0..<MAP_HEIGHT {
 		for x in 0..<MAP_WIDTH {
 			if y < len(data.tiles) && x < len(data.tiles[y]) {
-				v := data.tiles[y][x]
-				// clamp to valid TileType
-				if v <= u8(TileType.Water) {
-					m[y][x] = TileType(v)
-				} else {
-					m[y][x] = .Floor
-				}
+				m[y][x] = u8_to_cell(data.tiles[y][x])
 			} else {
-				m[y][x] = .Floor
+				m[y][x] = EmptyCell
 			}
 		}
 	}
-	fmt.printf("Loaded level from %s\n", path)
+	fmt.printf("Loaded level from %s (v%d)\n", path, data.version)
 	return true
 }

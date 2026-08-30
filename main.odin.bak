@@ -95,13 +95,26 @@ main :: proc() {
 
 		rl.BeginMode2D(camera)
 
-		// Outer flat (idx 0) now fills background - no void floor needed
-		// Draw oild autotile for entire map: inner = dirt where cell==oild, outer = grass where empty
-		if oild_id >= 0 {
-			draw_tileset(map_grid, oild_id)
-		}
-		if editor.show_debug {
-			editor_draw_debug_overlay(editor, map_grid)
+		rl.DrawRectangle(-20, -20, MAP_WIDTH*TILE_SIZE+40, MAP_HEIGHT*TILE_SIZE+40, {28,28,34,255})
+
+		draw_logical_floor(map_grid)
+
+		// Single tileset autotile
+		if editor.show_dual_preview || game_state == .Play {
+			if oild_id >= 0 {
+				draw_tileset(map_grid, oild_id)
+			}
+			if editor.show_debug {
+				editor_draw_debug_overlay(editor, map_grid)
+			}
+		} else {
+			for y in 0..<MAP_HEIGHT {
+				for x in 0..<MAP_WIDTH {
+					cell := map_grid[y][x]
+					if cell_is_empty(cell) do continue
+					draw_cell(cell, x, y)
+				}
+			}
 		}
 
 		draw_decor_layer()
