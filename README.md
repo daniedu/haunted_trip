@@ -11,6 +11,7 @@ odin run .               # or devenv up (watchexec)
 ## Docs
 - Architecture & dual-grid explanation: `docs/dual_grid_and_editor.md`
 - References: `assets/references/REFERENCES.md` (lexaloffle 152784, Jess::codes)
+- Git recovery after `.devenv` purge (other clones diverged): `docs/GIT_RECOVERY.md`
 
 ## Controls (Edit)
 `LMB` paint `RMB` erase `MMB` pick | `1-4` `Floor/Wall/Water/Empty` `Q/E` cycle | `G` grids `H` chunk `P` preview | `S` save `L` load `C` clear `R` reset | `TAB` Play
