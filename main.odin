@@ -104,7 +104,6 @@ main :: proc() {
 			editor_draw_debug_overlay(editor, map_grid)
 		}
 
-		draw_decor_layer()
 		draw_grids(editor.show_logical, editor.show_dual, editor.show_chunk)
 
 		if game_state == .Edit {

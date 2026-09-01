@@ -45,5 +45,3 @@ draw_tileset :: proc(m: Map, set_id: int) {
 		}
 	}
 }
-
-draw_decor_layer :: proc() {}

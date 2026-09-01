@@ -9,27 +9,29 @@ GameState :: enum {
 }
 
 // ---- Global sizing constants ----
-TILE_SIZE     :: 24
-DUAL_OFFSET   :: TILE_SIZE / 2 // 12
-MAP_WIDTH     :: 16
-MAP_HEIGHT    :: 16
-CHUNK_SIZE    :: 16 // tiles per chunk (384px)
+TILE_SIZE :: 24
+DUAL_OFFSET :: TILE_SIZE / 2 // 12
+MAP_WIDTH :: 16
+MAP_HEIGHT :: 16
+CHUNK_SIZE :: 16
 
-PLAYER_SIZE   :: 32
+PLAYER_SIZE :: 32
 
 // Single-tileset model: each cell is either empty (-1) or belongs to one tileset.
 // For now we only use "oild" (set_id 0). Dual-grid shows transition between
 // member and empty using the 16-tile atlas.
 TileCell :: struct {
-	set_id: int, // index into TILESET_DECLS, -1 = empty/void
+	set_id: int,
 }
 
 Map :: [MAP_HEIGHT][MAP_WIDTH]TileCell
-EmptyCell :: TileCell{set_id = -1}
+EmptyCell :: TileCell {
+	set_id = -1,
+}
 
 // Cell helpers - single source via tileset validation
-tileset_is_valid :: proc(id: int) -> bool { return id >= 0 && id < len(TILESET_DECLS) }
-cell_is_empty :: proc(c: TileCell) -> bool { return !tileset_is_valid(c.set_id) }
+tileset_is_valid :: proc(id: int) -> bool {return id >= 0 && id < len(TILESET_DECLS)}
+cell_is_empty :: proc(c: TileCell) -> bool {return !tileset_is_valid(c.set_id)}
 cell_is_solid :: proc(c: TileCell) -> bool {
 	if cell_is_empty(c) do return false
 	return TILESET_DECLS[c.set_id].is_solid
@@ -56,10 +58,10 @@ get_cell_safe :: proc(m: Map, x, y: int) -> TileCell {
 // Single mask: 4 corners -> 4-bit index. Member = set_id present, empty = not.
 get_dual_index_for_set :: proc(m: Map, x, y: int, set_id: int) -> u8 {
 	b: u8 = 0
-	if cell_is_of_set(get_cell_safe(m, x,   y),   set_id) { b |= 1 }
-	if cell_is_of_set(get_cell_safe(m, x+1, y),   set_id) { b |= 2 }
-	if cell_is_of_set(get_cell_safe(m, x,   y+1), set_id) { b |= 4 }
-	if cell_is_of_set(get_cell_safe(m, x+1, y+1), set_id) { b |= 8 }
+	if cell_is_of_set(get_cell_safe(m, x, y), set_id) {b |= 1}
+	if cell_is_of_set(get_cell_safe(m, x + 1, y), set_id) {b |= 2}
+	if cell_is_of_set(get_cell_safe(m, x, y + 1), set_id) {b |= 4}
+	if cell_is_of_set(get_cell_safe(m, x + 1, y + 1), set_id) {b |= 8}
 	return b
 }
 
@@ -86,9 +88,11 @@ make_default_map :: proc() -> Map {
 	m: Map
 	oild_id := find_tileset_by_name("oild")
 	if oild_id < 0 do oild_id = 0
-	for y in 0..<MAP_HEIGHT {
-		for x in 0..<MAP_WIDTH {
-			m[y][x] = TileCell{set_id = oild_id}
+	for y in 0 ..< MAP_HEIGHT {
+		for x in 0 ..< MAP_WIDTH {
+			m[y][x] = TileCell {
+				set_id = oild_id,
+			}
 		}
 	}
 	// 2x2 outer pocket shows autotile ring

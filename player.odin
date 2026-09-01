@@ -7,7 +7,7 @@ Player :: struct {
 	velocity:        rl.Vector2,
 	facing:          Direction,
 	move_speed:      f32,
-	base_speed:      f32, // for restoring after slower tiles
+	base_speed:      f32,
 	equipped_weapon: WeaponType,
 	is_attacking:    bool,
 	attack_timer:    f32,

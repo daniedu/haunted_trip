@@ -21,6 +21,9 @@
   processes.autobuild.exec = ''
     watchexec -e odin --no-default-ignore --restart -- odin run .
   '';
+
+  # rclone sync /home/work/Projects/dev_games/haunted_trip/wip_assets haunted_trip_drive:Juegos/haunted_trip --progress
+
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
 

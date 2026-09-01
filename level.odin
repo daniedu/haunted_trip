@@ -4,7 +4,7 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 
-LEVEL_PATH :: "assets/tiles/level_01.json"
+LEVEL_PATH :: "levels/level_01.json"
 
 LevelData :: struct {
 	version: int,
@@ -28,9 +28,9 @@ u8_to_cell :: proc(v: u8) -> TileCell {
 save_level :: proc(path: string, m: Map) -> bool {
 	tiles := make([][]u8, MAP_HEIGHT)
 	defer {}
-	for y in 0..<MAP_HEIGHT {
+	for y in 0 ..< MAP_HEIGHT {
 		row := make([]u8, MAP_WIDTH)
-		for x in 0..<MAP_WIDTH {
+		for x in 0 ..< MAP_WIDTH {
 			row[x] = cell_to_u8(m[y][x])
 		}
 		tiles[y] = row
@@ -40,7 +40,7 @@ save_level :: proc(path: string, m: Map) -> bool {
 		delete(tiles)
 	}
 
-	data := LevelData{
+	data := LevelData {
 		version = 4,
 		width   = MAP_WIDTH,
 		height  = MAP_HEIGHT,
@@ -81,7 +81,13 @@ load_level :: proc(path: string, m: ^Map) -> bool {
 	}
 
 	if data.width != MAP_WIDTH || data.height != MAP_HEIGHT {
-		fmt.eprintf("load_level: size mismatch file %dx%d vs compiled %dx%d - crop/pad\n", data.width, data.height, MAP_WIDTH, MAP_HEIGHT)
+		fmt.eprintf(
+			"load_level: size mismatch file %dx%d vs compiled %dx%d - crop/pad\n",
+			data.width,
+			data.height,
+			MAP_WIDTH,
+			MAP_HEIGHT,
+		)
 	}
 
 	// ignore versions <4 (legacy inner/outer and TileType)
@@ -91,8 +97,8 @@ load_level :: proc(path: string, m: ^Map) -> bool {
 		return false
 	}
 
-	for y in 0..<MAP_HEIGHT {
-		for x in 0..<MAP_WIDTH {
+	for y in 0 ..< MAP_HEIGHT {
+		for x in 0 ..< MAP_WIDTH {
 			if y < len(data.tiles) && x < len(data.tiles[y]) {
 				m[y][x] = u8_to_cell(data.tiles[y][x])
 			} else {

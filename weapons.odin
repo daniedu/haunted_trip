@@ -24,6 +24,7 @@ WEAPON_STATS := [WeaponType]WeaponData {
 	.Bow = {attack_duration = 0.3, length = 25.0, width = 12.0, damage = 4},
 	.Staff = {attack_duration = 0.4, length = 22.0, width = 22.0, damage = 6},
 }
+
 get_weapon_rect :: proc(player: Player) -> rl.Rectangle {
 	weapon := WEAPON_STATS[player.equipped_weapon]
 	player_size :: 32.0
@@ -32,7 +33,6 @@ get_weapon_rect :: proc(player: Player) -> rl.Rectangle {
 
 	switch player.facing {
 	case .Up:
-		// Up/Down: Width goes horizontal, Length goes vertical (upward)
 		rect.width = weapon.width
 		rect.height = weapon.length
 		rect.x = player.position.x + (player_size / 2) - (rect.width / 2)
@@ -45,7 +45,6 @@ get_weapon_rect :: proc(player: Player) -> rl.Rectangle {
 		rect.y = player.position.y + player_size
 
 	case .Left:
-		// Left/Right: Length goes horizontal (leftward), Width goes vertical
 		rect.width = weapon.length
 		rect.height = weapon.width
 		rect.x = player.position.x - rect.width

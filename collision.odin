@@ -26,9 +26,6 @@ is_position_solid :: proc(pos: rl.Vector2, size: f32, m: Map) -> bool {
 			}
 		}
 	}
-	if is_decor_solid_at(player_rect) {
-		return true
-	}
 	return false
 }
 
