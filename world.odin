@@ -8,99 +8,80 @@ GameState :: enum {
 	Edit,
 }
 
-// ---- Global sizing constants ----
-TILE_SIZE :: 24
-DUAL_OFFSET :: TILE_SIZE / 2 // 12
-MAP_WIDTH :: 16
-MAP_HEIGHT :: 16
-CHUNK_SIZE :: 16
+TILE_SIZE   :: 24
+DUAL_OFFSET :: TILE_SIZE / 2 // 12 — visual grid is offset so tiles look nice
+MAP_WIDTH   :: 16
+MAP_HEIGHT  :: 16
+VISUAL_W    :: MAP_WIDTH + 1  // 17
+VISUAL_H    :: MAP_HEIGHT + 1 // 17
+CHUNK_SIZE  :: 16
 
 PLAYER_SIZE :: 32
 
-// Single-tileset model: each cell is either empty (-1) or belongs to one tileset.
-// For now we only use "oild" (set_id 0). Dual-grid shows transition between
-// member and empty using the 16-tile atlas.
+// Visual tiles: double-grid offset 17x17, you place variant 0..15 directly.
+// This is what you see — nice offset.
+EMPTY_TILE :: -1
+
 TileCell :: struct {
-	set_id: int,
+	set_id:  int, // -1 = empty, 0..len(TILESET_DECLS)-1
+	variant: u8,  // 0..15 (outer 0000 → inner 1111) — like PNG
 }
 
-Map :: [MAP_HEIGHT][MAP_WIDTH]TileCell
-EmptyCell :: TileCell {
-	set_id = -1,
-}
+VisualMap :: [VISUAL_H][VISUAL_W]TileCell
+EmptyCell :: TileCell{set_id = EMPTY_TILE, variant = 0}
 
-// Cell helpers - single source via tileset validation
+// Collision: separate 16x16 manual grid — you paint solid where you want block.
+CollisionMap :: [MAP_HEIGHT][MAP_WIDTH]bool
+
 tileset_is_valid :: proc(id: int) -> bool {return id >= 0 && id < len(TILESET_DECLS)}
-cell_is_empty :: proc(c: TileCell) -> bool {return !tileset_is_valid(c.set_id)}
-cell_is_solid :: proc(c: TileCell) -> bool {
-	if cell_is_empty(c) do return false
-	return TILESET_DECLS[c.set_id].is_solid
-}
-cell_is_slower :: proc(c: TileCell) -> bool {
-	if cell_is_empty(c) do return false
-	return TILESET_DECLS[c.set_id].is_slower
-}
-cell_color :: proc(c: TileCell) -> rl.Color {
-	if cell_is_empty(c) do return rl.BLANK
-	return TILESET_DECLS[c.set_id].color
-}
-cell_is_of_set :: proc(c: TileCell, set_id: int) -> bool {
-	return !cell_is_empty(c) && c.set_id == set_id
-}
+cell_is_empty  :: proc(c: TileCell) -> bool {return !tileset_is_valid(c.set_id)}
 
-get_cell_safe :: proc(m: Map, x, y: int) -> TileCell {
-	if x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT {
-		return EmptyCell
-	}
+get_visual_safe :: proc(m: VisualMap, x, y: int) -> TileCell {
+	if x < 0 || x >= VISUAL_W || y < 0 || y >= VISUAL_H do return EmptyCell
 	return m[y][x]
 }
 
-// Single mask: 4 corners -> 4-bit index. Member = set_id present, empty = not.
-get_dual_index_for_set :: proc(m: Map, x, y: int, set_id: int) -> u8 {
-	b: u8 = 0
-	if cell_is_of_set(get_cell_safe(m, x, y), set_id) {b |= 1}
-	if cell_is_of_set(get_cell_safe(m, x + 1, y), set_id) {b |= 2}
-	if cell_is_of_set(get_cell_safe(m, x, y + 1), set_id) {b |= 4}
-	if cell_is_of_set(get_cell_safe(m, x + 1, y + 1), set_id) {b |= 8}
-	return b
+get_collision_safe :: proc(m: CollisionMap, x, y: int) -> bool {
+	if x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT do return false
+	return m[y][x]
 }
 
 world_to_cell :: proc(pos: rl.Vector2) -> [2]int {
 	return {int(math.floor(pos.x / f32(TILE_SIZE))), int(math.floor(pos.y / f32(TILE_SIZE)))}
 }
 
+world_to_visual :: proc(pos: rl.Vector2) -> [2]int {
+	// visual grid is offset by DUAL_OFFSET
+	return {int(math.floor((pos.x - DUAL_OFFSET) / f32(TILE_SIZE))), int(math.floor((pos.y - DUAL_OFFSET) / f32(TILE_SIZE)))}
+}
+
 cell_to_world :: proc(x, y: int) -> rl.Vector2 {
 	return {f32(x * TILE_SIZE), f32(y * TILE_SIZE)}
 }
 
-make_cell :: proc(set_id: int) -> TileCell {
-	if set_id < 0 do return EmptyCell
-	return TileCell{set_id = set_id}
-}
-find_tileset_by_name :: proc(name: string) -> int {
-	for decl, i in TILESET_DECLS {
-		if decl.name == name do return i
-	}
-	return -1
+make_cell :: proc(set_id: int, variant: u8 = 15) -> TileCell {
+	if !tileset_is_valid(set_id) do return EmptyCell
+	return TileCell{set_id = set_id, variant = variant % 16}
 }
 
-make_default_map :: proc() -> Map {
-	m: Map
-	oild_id := find_tileset_by_name("oild")
-	if oild_id < 0 do oild_id = 0
-	for y in 0 ..< MAP_HEIGHT {
-		for x in 0 ..< MAP_WIDTH {
-			m[y][x] = TileCell {
-				set_id = oild_id,
-			}
-		}
-	}
-	// 2x2 outer pocket shows autotile ring
+make_default_visual :: proc() -> VisualMap {
+	m: VisualMap
+	// start empty (void) — you paint what you want
+	return m
+}
+
+make_default_collision :: proc() -> CollisionMap {
+	m: CollisionMap
+	// small demo wall at 6,6 2x2
 	if MAP_WIDTH >= 8 && MAP_HEIGHT >= 8 {
-		m[6][6] = EmptyCell
-		m[6][7] = EmptyCell
-		m[7][6] = EmptyCell
-		m[7][7] = EmptyCell
+		m[6][6] = true
+		m[6][7] = true
+		m[7][6] = true
+		m[7][7] = true
 	}
 	return m
 }
+
+// Kept for compat — old Map was 16x16 TileCell, now Visual is 17x17
+Map :: VisualMap
+make_default_map :: proc() -> VisualMap { return make_default_visual() }
